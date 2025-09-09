@@ -1,0 +1,9 @@
+spring:
+  config:
+    import:
+    optional:
+    config server:
+  cloud:
+    config:
+      uri: http://CONFIG-SERVER:8888
+      fail-fast: false
