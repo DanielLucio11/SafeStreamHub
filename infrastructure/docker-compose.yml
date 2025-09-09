@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  discovery-server:
+    image: safestreamhub/service-discovery:latest
+    build:
+      context: ../backend/service-discovery
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  api-gateway:
+    image: safestreamhub/api-gateway:latest
+    build:
+      context: ../backend/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka/
+
+  auth-service:
+    image: safestreamhub/auth-service:latest
+    build:
+      context: ../backend/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      - discovery-server
+      - postgres
+      - redis
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/safestreamhub
+      - SPRING_REDIS_HOST=redis
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka/
+
+  media-service:
+    image: safestreamhub/media-service:latest
+    build:
+      context: ../backend/media-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    depends_on:
+      - discovery-server
+      - postgres
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/safestreamhub
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka/
+
+  content-service:
+    image: safestreamhub/content-service:latest
+    build:
+      context: ../backend/content-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    depends_on:
+      - discovery-server
+      - media-service
+    environment:
+      - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://discovery-server:8761/eureka/
+
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: safestreamhub
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./init-scripts/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_/data
+
+  frontend:
+    image: safestreamhub/frontend:latest
+    build:
+      context: ../frontend/stream-pay-app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SERVER_ROOT_URL: http://localhost:3001
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_/var/lib/grafana
+
+volumes:
+  postgres_
+  redis_
+  prometheus_
+  grafana_data:

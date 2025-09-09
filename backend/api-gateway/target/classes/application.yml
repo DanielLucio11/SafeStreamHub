@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: API-GATEWAY
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - StripPrefix=1
+  config:
+    import-check:
+      enabled: false
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://DISCOVERY-SERVER:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.uuid}
