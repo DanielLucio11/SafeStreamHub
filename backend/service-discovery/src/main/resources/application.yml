@@ -1,0 +1,29 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: DISCOVERY-SERVER
+
+eureka:
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${EUREKA_INSTANCE_HOSTNAME:localhost}:${server.port}/eureka/
+    initial-instance-info-replication-interval-seconds: 15
+    instance-info-replication-interval-seconds: 15
+  server:
+    enable-self-preservation: true
+    eviction-interval-timer-in-ms: 60000
+
+logging:
+  level:
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO
+    org.springframework.cloud.netflix.eureka: INFO
